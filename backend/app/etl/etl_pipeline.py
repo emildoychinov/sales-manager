@@ -12,6 +12,21 @@ COLUMNS = [
     "QTR_ID",
     "MONTH_ID",
     "YEAR_ID",
+    "PRODUCTLINE",
+    "MSRP",
+    "PRODUCTCODE",
+    "CUSTOMERNAME",
+    "PHONE",
+    "ADDRESSLINE1",
+    "ADDRESSLINE2",
+    "CITY",
+    "STATE",
+    "POSTALCODE",
+    "COUNTRY",
+    "TERRITORY",
+    "CONTACTLASTNAME",
+    "CONTACTFIRSTNAME",
+    "DEALSIZE",
 ]
 
 def extract(file: bytes) -> pd.DataFrame:
@@ -26,6 +41,32 @@ def extract(file: bytes) -> pd.DataFrame:
             raise ValueError("ERROR:No data found in the file")
 
         print(data_frame)
+        return data_frame
+    except Exception as e:
+        raise ValueError(f"ERROR: {e}")
+
+def transform(data_frame: pd.DataFrame) -> pd.DataFrame:
+    try:
+        data_frame.drop_duplicates(subset=["ORDERNUMBER", "PRODUCTCODE"], keep="last", inplace=True)
+        data_frame.dropna(subset=["ORDERNUMBER", "PRODUCTCODE"], inplace=True)
+        numeric_cols = [c for c in data_frame.columns if pd.api.types.is_numeric_dtype(data_frame[c])]
+        object_cols = [c for c in data_frame.columns if pd.api.types.is_object_dtype(data_frame[c])]
+
+        if object_cols:
+            modes = data_frame[object_cols].mode()
+            if not modes.empty:
+                data_frame[object_cols] = data_frame[object_cols].fillna(modes.iloc[0])
+            else:
+                data_frame[object_cols] = data_frame[object_cols].fillna("")
+                
+        if numeric_cols:
+            data_frame[numeric_cols] = data_frame[numeric_cols].fillna(data_frame[numeric_cols].median())
+
+        data_frame["ORDERDATE"] = pd.to_datetime(data_frame["ORDERDATE"], errors="coerce")
+        data_frame.dropna(subset=["ORDERDATE"], inplace=True)
+
+        data_frame['TOTAL_SALES'] = data_frame['QUANTITYORDERED'] * data_frame['PRICEEACH']
+
         return data_frame
     except Exception as e:
         raise ValueError(f"ERROR: {e}")

@@ -6,6 +6,7 @@ from app.routers.auth import router as auth_router
 import kagglehub
 from app.etl import etl_pipeline
 from pathlib import Path
+import json
 
 app = FastAPI(
     title="CSV Data Ingestion Pipeline",
@@ -30,14 +31,16 @@ def health_check():
     return {"status": "ok"}
 
 # testing purposes
-# @app.get("/api/datasets")
-# def get_datasets():
-#     path = kagglehub.dataset_download("kyanyoga/sample-sales-data")
-#     csv_path = Path(path) / "sales_data_sample.csv"
-#     with open(csv_path, "rb") as file:
-#         data = file.read()
+@app.get("/api/datasets")
+def get_datasets():
+    path = kagglehub.dataset_download("kyanyoga/sample-sales-data")
+    csv_path = Path(path) / "sales_data_sample.csv"
+    with open(csv_path, "rb") as file:
+        data = file.read()
 
-#     df = etl_pipeline.extract(data)
-#     return df.head(5).to_dict(orient="records")
+    df = etl_pipeline.extract(data)
+    df = etl_pipeline.transform(df)
+    json_str = df.head(5).to_json(orient="records", date_format="iso")
+    return json.loads(json_str or "[]")
 
 app.include_router(auth_router, prefix="/api/auth")
