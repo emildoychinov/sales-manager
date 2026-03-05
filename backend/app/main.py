@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.models import User, Dataset, SalesRecord
-from app.auth.router import router as auth_router
+from app.routers.auth import router as auth_router
 
 app = FastAPI(
     title="CSV Data Ingestion Pipeline",
