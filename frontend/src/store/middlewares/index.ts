@@ -10,6 +10,8 @@ export {
   getDatasetById,
   getDatasetRecords,
   getDatasetAggregates,
+  getDatasetStatuses,
+  getDatasetProductLines,
   exportDataset,
   uploadDataset,
   deleteDataset,
