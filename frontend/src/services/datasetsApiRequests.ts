@@ -1,5 +1,5 @@
 import { axiosClient } from "../utils/axiosClient";
-import type { PaginationParams, RecordsQueryParams } from "../types";
+import type { DatasetFilters, PaginationParams, RecordsQueryParams } from "../types";
 
 const datasetsApiRequests = {
   list: (params: PaginationParams = {}): Promise<any> => {
@@ -28,8 +28,23 @@ const datasetsApiRequests = {
     });
   },
 
-  getAggregates: (datasetId: number): Promise<any> => {
-    return axiosClient.get(`/api/datasets/${datasetId}/aggregates`);
+  getAggregates: (datasetId: number, filters: DatasetFilters = {}): Promise<any> => {
+
+    // there is probably a better way to do this
+    const queryParams: Record<string, string> = {};
+    if (filters.status) queryParams.status = filters.status;
+    if (filters.productLine) queryParams.product_line = filters.productLine;
+    if (filters.dateFrom) queryParams.date_from = filters.dateFrom;
+    if (filters.dateTo) queryParams.date_to = filters.dateTo;
+    return axiosClient.get(`/api/datasets/${datasetId}/aggregates`, { params: queryParams });
+  },
+
+  getStatuses: (datasetId: number): Promise<any> => {
+    return axiosClient.get(`/api/datasets/${datasetId}/statuses`);
+  },
+
+  getProductLines: (datasetId: number): Promise<any> => {
+    return axiosClient.get(`/api/datasets/${datasetId}/product-lines`);
   },
 
   export: (datasetId: number, fmt: "csv" | "parquet" = "csv"): Promise<any> => {
