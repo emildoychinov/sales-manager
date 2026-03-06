@@ -24,6 +24,7 @@ def transform(data_frame: pd.DataFrame) -> pd.DataFrame:
     try:
         data_frame.drop_duplicates(subset=["ORDERNUMBER", "PRODUCTCODE"], keep="last", inplace=True)
         data_frame.dropna(subset=["ORDERNUMBER", "PRODUCTCODE"], inplace=True)
+        
         numeric_cols = [c for c in data_frame.columns if pd.api.types.is_numeric_dtype(data_frame[c])]
         object_cols = [c for c in data_frame.columns if pd.api.types.is_object_dtype(data_frame[c])]
 

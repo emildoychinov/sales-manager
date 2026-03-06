@@ -18,6 +18,7 @@ DELETE_BATCH_SIZE = 5000
 def process_upload_task(self, dataset_id: int, file_bytes_hex: str):
     db = SessionLocal()
     dataset: Dataset | None = None
+
     try:
         dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
         if not dataset:
@@ -123,12 +124,15 @@ def delete_dataset_task(self, dataset_id: int):
     except (OperationalError, SQLAlchemyError) as e:
         db.rollback()
         raise self.retry(exc=e, countdown=10)
+
     except Exception as e:
         db.rollback()
         dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+
         if dataset:
             dataset.status = Status.FAILED
             dataset.error_message = f"ERROR: Delete failed: {e}"
             db.commit()
+
     finally:
         db.close()

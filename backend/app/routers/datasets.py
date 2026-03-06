@@ -29,14 +29,18 @@ def list_datasets(
     return ETLService(db).get_datasets(current_user.id)
 
 @router.get("/{dataset_id}", response_model=DatasetSummary)
+#TODO : return upload progress
+#TODO : return delete progress
 def get_dataset(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     dataset = ETLService(db).get_dataset_by_id(dataset_id, current_user.id)
+
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
     return dataset
 
 @router.get("/{dataset_id}/records", response_model=Page[SalesRecordResponse])
@@ -53,6 +57,7 @@ def get_dataset_records(
 ):
     service = ETLService(db)
     dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
@@ -65,6 +70,7 @@ def get_dataset_records(
         date_from=date_from,
         date_to=date_to,
     )
+
     return paginate(db, query)
 
 @router.get("/{dataset_id}/aggregates")
@@ -75,8 +81,10 @@ def get_dataset_aggregates(
 ):
     service = ETLService(db)
     dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
     return service.get_aggregates(dataset_id)
 
 @router.get("/{dataset_id}/export")
@@ -87,8 +95,10 @@ def export_dataset(
     db: Session = Depends(get_db),
 ):
     data = ETLService(db).export_dataset(dataset_id, current_user.id, fmt)
+
     if data is None:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
     return Response(
         content=data,
         media_type="text/csv",
@@ -102,8 +112,10 @@ def delete_dataset(
     db: Session = Depends(get_db),
 ):
     dataset = ETLService(db).delete_dataset(dataset_id, current_user.id)
+
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
+
     return {"message": "Dataset deletion started", "dataset_id": dataset_id}
 
 @router.post("/upload", response_model=UploadResponse)
@@ -113,6 +125,7 @@ async def upload_dataset(
     db: Session = Depends(get_db),
 ):
     dataset = await ETLService(db).upload_dataset(current_user.id, file)
+
     return UploadResponse(
         dataset_id=dataset.id,
         status=dataset.status,
