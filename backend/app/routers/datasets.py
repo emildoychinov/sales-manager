@@ -74,8 +74,8 @@ def get_dataset_records(
 
     return paginate(db, query)
 
-@router.get("/{dataset_id}/aggregates")
-def get_dataset_aggregates(
+@router.get("/{dataset_id}/statuses", response_model=list[str])
+def get_dataset_statuses(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -86,7 +86,45 @@ def get_dataset_aggregates(
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
-    return service.get_aggregates(dataset_id)
+    return service.get_distinct_statuses(dataset_id)
+
+@router.get("/{dataset_id}/product-lines", response_model=list[str])
+def get_dataset_product_lines(
+    dataset_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ETLService(db)
+    dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
+    return service.get_distinct_product_lines(dataset_id)
+
+@router.get("/{dataset_id}/aggregates")
+def get_dataset_aggregates(
+    dataset_id: int,
+    status: str | None = None,
+    product_line: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ETLService(db)
+    dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
+    return service.get_aggregates(
+        dataset_id,
+        status=status,
+        product_line=product_line,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 @router.get("/{dataset_id}/export")
 def export_dataset(

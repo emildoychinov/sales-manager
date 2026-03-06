@@ -64,27 +64,72 @@ class ETLService:
             .first()
         )
 
-    def get_aggregates(self, dataset_id: int) -> dict:
+    def get_distinct_statuses(self, dataset_id: int) -> list[str]:
+        rows = (
+            self.db.query(SalesRecord.status)
+            .filter(SalesRecord.dataset_id == dataset_id, SalesRecord.status.isnot(None))
+            .distinct()
+            .order_by(SalesRecord.status)
+            .all()
+        )
+        return [r[0] for r in rows]
+
+    def get_distinct_product_lines(self, dataset_id: int) -> list[str]:
+        rows = (
+            self.db.query(SalesRecord.product_line)
+            .filter(SalesRecord.dataset_id == dataset_id, SalesRecord.product_line.isnot(None))
+            .distinct()
+            .order_by(SalesRecord.product_line)
+            .all()
+        )
+        return [r[0] for r in rows]
+
+    def _apply_record_filters(self, query, dataset_id: int, status: str | None = None,
+                               product_line: str | None = None, date_from: date | None = None,
+                               date_to: date | None = None):
+
+        # there is probably a better way to do this
+        query = query.filter(SalesRecord.dataset_id == dataset_id)
+        
+        if status:
+            query = query.filter(SalesRecord.status == status)
+        if product_line:
+            query = query.filter(SalesRecord.product_line == product_line)
+        if date_from:
+            query = query.filter(SalesRecord.order_date >= date_from)
+        if date_to:
+            query = query.filter(SalesRecord.order_date <= date_to)
+
+        return query
+
+    def get_aggregates(
+        self,
+        dataset_id: int,
+        status: str | None = None,
+        product_line: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> dict:
+        base = self.db.query(SalesRecord)
+        base = self._apply_record_filters(base, dataset_id, status, product_line, date_from, date_to)
+
         sales_by_product_line = (
-            self.db.query(SalesRecord.product_line, func.sum(SalesRecord.total_sales))
-            .filter(SalesRecord.dataset_id == dataset_id)
+            base.with_entities(SalesRecord.product_line, func.sum(SalesRecord.total_sales))
             .group_by(SalesRecord.product_line)
             .all()
         )
 
         sales_by_country = (
-            self.db.query(SalesRecord.country, func.sum(SalesRecord.total_sales))
-            .filter(SalesRecord.dataset_id == dataset_id)
+            base.with_entities(SalesRecord.country, func.sum(SalesRecord.total_sales))
             .group_by(SalesRecord.country)
             .all()
         )
 
         sales_over_time = (
-            self.db.query(
+            base.with_entities(
                 func.to_char(SalesRecord.order_date, 'YYYY-MM').label("month"),
                 func.sum(SalesRecord.total_sales),
             )
-            .filter(SalesRecord.dataset_id == dataset_id)
             .group_by("month")
             .order_by("month")
             .all()
