@@ -28,7 +28,8 @@ export interface DatasetsState {
   datasetsTotal: number;
   selectedDataset: DatasetSummary | null;
   records: unknown;
-  aggregates: unknown;
+  aggregates: DatasetAggregates | null;
+  aggregatesLoading: boolean;
   isLoading: boolean;
   errorMessage: string | null;
 }
