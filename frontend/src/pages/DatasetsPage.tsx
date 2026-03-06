@@ -24,7 +24,9 @@ export function DatasetsPage() {
     dispatch(listDatasets(paginationParams));
   }, [dispatch, page, rowsPerPage, refreshTrigger]);
 
-  const hasActiveJobs = datasets.some((d) => d.status === "processing" || d.status === "pending");
+  const hasActiveJobs = datasets.some(
+    (d) => d.status === "processing" || d.status === "pending" || d.status === "deleting",
+  );
 
   useEffect(() => {
     if (hasActiveJobs) {
