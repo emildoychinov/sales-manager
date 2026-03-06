@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, Query
 
 from app.models import Dataset, SalesRecord
-from app.etl.tasks import process_upload_task
+from app.etl.tasks import process_upload_task, delete_dataset_task
 from app.etl.etl_constants import COLUMN_MAP, Status
 
 
@@ -147,6 +147,23 @@ class ETLService:
         process_upload_task.apply_async(
             args=[dataset.id, file_bytes.hex()],
             eta=datetime.now(timezone.utc) + timedelta(seconds=1),
+            expires=3600,
+            retry=True,
+            retry_policy={"max_retries": 3},
+        )
+
+        return dataset
+
+    def delete_dataset(self, dataset_id: int, user_id: int) -> Dataset | None:
+        dataset = self.get_dataset_by_id(dataset_id, user_id)
+        if not dataset:
+            return None
+
+        dataset.status = Status.DELETING
+        self.db.commit()
+
+        delete_dataset_task.apply_async(
+            args=[dataset.id],
             expires=3600,
             retry=True,
             retry_policy={"max_retries": 3},

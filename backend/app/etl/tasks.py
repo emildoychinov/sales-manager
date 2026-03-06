@@ -1,12 +1,12 @@
 from app.worker import celery_app
 from app.database import SessionLocal
-from app.models import Dataset
+from app.models import Dataset, SalesRecord
 from app.etl.etl_constants import Status
 from app.etl import etl_pipeline
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from celery.exceptions import SoftTimeLimitExceeded
 
-
+DELETE_BATCH_SIZE = 5000
 @celery_app.task(
     bind=True,
     max_retries=3,
@@ -86,5 +86,49 @@ def process_upload_task(self, dataset_id: int, file_bytes_hex: str):
             dataset.error_message = f"ERROR: {str(e)}"
             db.commit()
 
+    finally:
+        db.close()
+
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=60 * 5,
+    time_limit=60 * 7,
+)
+def delete_dataset_task(self, dataset_id: int):
+    db = SessionLocal()
+    try:
+        dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if not dataset:
+            return
+
+        while True:
+            batch_ids = (
+                db.query(SalesRecord.id)
+                .filter(SalesRecord.dataset_id == dataset_id)
+                .limit(DELETE_BATCH_SIZE)
+                .all()
+            )
+            if not batch_ids:
+                break
+            ids = [row[0] for row in batch_ids]
+            db.query(SalesRecord).filter(SalesRecord.id.in_(ids)).delete(synchronize_session=False)
+            db.commit()
+
+        db.delete(dataset)
+        db.commit()
+
+    except (OperationalError, SQLAlchemyError) as e:
+        db.rollback()
+        raise self.retry(exc=e, countdown=10)
+    except Exception as e:
+        db.rollback()
+        dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if dataset:
+            dataset.status = Status.FAILED
+            dataset.error_message = f"ERROR: Delete failed: {e}"
+            db.commit()
     finally:
         db.close()

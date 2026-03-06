@@ -7,6 +7,7 @@ class Status(enum.Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    DELETING = "deleting"
 
 COLUMNS = [
     "ORDERNUMBER",

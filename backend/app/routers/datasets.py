@@ -2,13 +2,12 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Query
 from fastapi.responses import Response
-from fastapi.security import OAuth2PasswordBearer
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.orm import Session
 
-from app.auth.auth_service import AuthService
 from app.database import get_db
+from app.dependencies import get_current_user
 from app.etl.etl_service import ETLService
 from app.models import User
 from app.schemas import (
@@ -22,23 +21,12 @@ from app.schemas import (
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
-    return AuthService(db).get_current_user(token)
-
-
 @router.get("/", response_model=list[DatasetSummary])
 def list_datasets(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return ETLService(db).get_datasets(current_user.id)
-
 
 @router.get("/{dataset_id}", response_model=DatasetSummary)
 def get_dataset(
@@ -50,7 +38,6 @@ def get_dataset(
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
     return dataset
-
 
 @router.get("/{dataset_id}/records", response_model=Page[SalesRecordResponse])
 def get_dataset_records(
@@ -80,7 +67,6 @@ def get_dataset_records(
     )
     return paginate(db, query)
 
-
 @router.get("/{dataset_id}/aggregates")
 def get_dataset_aggregates(
     dataset_id: int,
@@ -92,7 +78,6 @@ def get_dataset_aggregates(
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
     return service.get_aggregates(dataset_id)
-
 
 @router.get("/{dataset_id}/export")
 def export_dataset(
@@ -110,6 +95,16 @@ def export_dataset(
         headers={"Content-Disposition": f"attachment; filename={dataset_id}.{fmt}"},
     )
 
+@router.delete("/{dataset_id}")
+def delete_dataset(
+    dataset_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    dataset = ETLService(db).delete_dataset(dataset_id, current_user.id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return {"message": "Dataset deletion started", "dataset_id": dataset_id}
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_dataset(
