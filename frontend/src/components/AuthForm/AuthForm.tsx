@@ -86,6 +86,7 @@ export function AuthForm() {
         </Typography>
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
+          
           <TextField
             margin="normal"
             required
@@ -102,6 +103,7 @@ export function AuthForm() {
             disabled={isLoading}
             sx={{ "& .MuiInputBase-root": { bgcolor: "grey.50" } }}
           />
+
           <TextField
             margin="normal"
             required
@@ -176,6 +178,7 @@ export function AuthForm() {
               </>
             )}
           </Typography>
+          
         </Box>
       </Box>
     </Box>
