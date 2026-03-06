@@ -92,6 +92,18 @@ export const getDatasetProductLines = createAsyncThunk(
   }
 );
 
+export const getDatasetCountries = createAsyncThunk(
+  "datasets/getDatasetCountries",
+  async (datasetId: number): Promise<unknown | AxiosError> => {
+    try {
+      const response = await datasetsApiRequests.getCountries(datasetId);
+      return response.data;
+    } catch (err) {
+      return err as AxiosError;
+    }
+  }
+);
+
 export const exportDataset = createAsyncThunk(
   "datasets/exportDataset",
   async (

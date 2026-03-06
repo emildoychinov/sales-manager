@@ -18,6 +18,7 @@ const datasetsApiRequests = {
     if (params.sortOrder) queryParams.sort_order = params.sortOrder;
     if (params.status) queryParams.status = params.status;
     if (params.productLine) queryParams.product_line = params.productLine;
+    if (params.country) queryParams.country = params.country;
     if (params.dateFrom) queryParams.date_from = params.dateFrom;
     if (params.dateTo) queryParams.date_to = params.dateTo;
     if (params.paginationParams?.page !== undefined) queryParams.page = String(params.paginationParams.page);
@@ -34,6 +35,7 @@ const datasetsApiRequests = {
     const queryParams: Record<string, string> = {};
     if (filters.status) queryParams.status = filters.status;
     if (filters.productLine) queryParams.product_line = filters.productLine;
+    if (filters.country) queryParams.country = filters.country;
     if (filters.dateFrom) queryParams.date_from = filters.dateFrom;
     if (filters.dateTo) queryParams.date_to = filters.dateTo;
     return axiosClient.get(`/api/datasets/${datasetId}/aggregates`, { params: queryParams });
@@ -45,6 +47,10 @@ const datasetsApiRequests = {
 
   getProductLines: (datasetId: number): Promise<any> => {
     return axiosClient.get(`/api/datasets/${datasetId}/product-lines`);
+  },
+
+  getCountries: (datasetId: number): Promise<any> => {
+    return axiosClient.get(`/api/datasets/${datasetId}/countries`);
   },
 
   export: (datasetId: number, fmt: "csv" | "parquet" = "csv"): Promise<any> => {

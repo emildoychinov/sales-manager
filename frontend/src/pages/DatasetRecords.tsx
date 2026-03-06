@@ -78,6 +78,7 @@ export function DatasetRecords({ datasetId, filters }: DatasetRecordsProps) {
           sortOrder,
           status: filters.status,
           productLine: filters.productLine,
+          country: filters.country,
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           paginationParams: { page: page + 1, size: rowsPerPage },

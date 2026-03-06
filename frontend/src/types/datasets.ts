@@ -37,6 +37,7 @@ export interface DatasetsState {
 export interface DatasetFilters {
   status?: string;
   productLine?: string;
+  country?: string;
   dateFrom?: string;
   dateTo?: string;
 }

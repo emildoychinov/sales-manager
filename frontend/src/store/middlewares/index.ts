@@ -12,6 +12,7 @@ export {
   getDatasetAggregates,
   getDatasetStatuses,
   getDatasetProductLines,
+  getDatasetCountries,
   exportDataset,
   uploadDataset,
   deleteDataset,

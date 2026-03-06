@@ -18,7 +18,7 @@ import { DatasetDetails } from "./DatasetDetails";
 import { DatasetRecords } from "./DatasetRecords";
 import { DatasetCharts } from "./DatasetCharts";
 import { useDispatch, useSelector } from "../store/hooks";
-import { getDatasetById, getDatasetStatuses, getDatasetProductLines } from "../store/middlewares";
+import { getDatasetById, getDatasetStatuses, getDatasetProductLines, getDatasetCountries } from "../store/middlewares";
 import { clearSelectedDataset } from "../store/reducers/datasetsReducer";
 import type { DatasetFilters } from "../types";
 
@@ -33,9 +33,11 @@ export function DatasetDetailPage({ datasetId, onBack }: DatasetDetailPageProps)
 
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [productLineOptions, setProductLineOptions] = useState<string[]>([]);
+  const [countryOptions, setCountryOptions] = useState<string[]>([]);
 
   const [statusDraft, setStatusDraft] = useState("");
   const [productLineDraft, setProductLineDraft] = useState("");
+  const [countryDraft, setCountryDraft] = useState("");
   const [dateFromDraft, setDateFromDraft] = useState("");
   const [dateToDraft, setDateToDraft] = useState("");
 
@@ -48,18 +50,23 @@ export function DatasetDetailPage({ datasetId, onBack }: DatasetDetailPageProps)
 
   useEffect(() => {
     async function fetchDropdownData() {
-      const [statusRes, productLineRes] = await Promise.all([
+      const [statusRes, productLineRes, countriesRes] = await Promise.all([
         dispatch(getDatasetStatuses(datasetId)),
         dispatch(getDatasetProductLines(datasetId)),
+        dispatch(getDatasetCountries(datasetId)),
       ]);
 
+      //there probably is a better way to do this
       if (statusRes.payload && !isAxiosError(statusRes.payload))
         setStatusOptions(statusRes.payload as string[]);
 
       if (productLineRes.payload && !isAxiosError(productLineRes.payload))
         setProductLineOptions(productLineRes.payload as string[]);
+
+      if (countriesRes.payload && !isAxiosError(countriesRes.payload))
+        setCountryOptions(countriesRes.payload as string[]);
     }
-    
+
     fetchDropdownData();
   }, [dispatch, datasetId]);
 
@@ -67,10 +74,11 @@ export function DatasetDetailPage({ datasetId, onBack }: DatasetDetailPageProps)
     setFilters({
       status: statusDraft || undefined,
       productLine: productLineDraft || undefined,
+      country: countryDraft || undefined,
       dateFrom: dateFromDraft || undefined,
       dateTo: dateToDraft || undefined,
     });
-  }, [statusDraft, productLineDraft, dateFromDraft, dateToDraft]);
+  }, [statusDraft, productLineDraft, countryDraft, dateFromDraft, dateToDraft]);
 
   if (isLoading && !selectedDataset) {
     return (
@@ -131,6 +139,20 @@ export function DatasetDetailPage({ datasetId, onBack }: DatasetDetailPageProps)
             <MenuItem value="">All</MenuItem>
             {productLineOptions.map((pl) => (
               <MenuItem key={pl} value={pl}>{pl}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Country</InputLabel>
+          <Select
+            value={countryDraft}
+            label="Country"
+            onChange={(e) => setCountryDraft(e.target.value)}
+          >
+            <MenuItem value="">All</MenuItem>
+            {countryOptions.map((c) => (
+              <MenuItem key={c} value={c}>{c}</MenuItem>
             ))}
           </Select>
         </FormControl>
