@@ -1,20 +1,32 @@
 from app.worker import celery_app
 from app.database import SessionLocal
 from app.models import Dataset
+from app.etl.etl_constants import Status
 from app.etl import etl_pipeline
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from celery.exceptions import SoftTimeLimitExceeded
 
 
-@celery_app.task(bind=True)
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    soft_time_limit=60 * 10,
+    time_limit=60 * 12,
+)
 def process_upload_task(self, dataset_id: int, file_bytes_hex: str):
     db = SessionLocal()
+    dataset: Dataset | None = None
     try:
         dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
         if not dataset:
             return
 
-        dataset.status = "processing"
+        dataset.status = Status.PROCESSING
         dataset.progress = 0.0
         db.commit()
+        self.update_state(state="PROGRESS", meta={"progress": 0.0})
 
         file_bytes = bytes.fromhex(file_bytes_hex)
 
@@ -22,14 +34,17 @@ def process_upload_task(self, dataset_id: int, file_bytes_hex: str):
         rows_before = len(df)
         dataset.progress = 0.2
         db.commit()
+        self.update_state(state="PROGRESS", meta={"progress": 0.2})
 
         df = etl_pipeline.transform(df)
         dataset.progress = 0.5
         db.commit()
+        self.update_state(state="PROGRESS", meta={"progress": 0.5})
 
         etl_pipeline.load(df, dataset.id, db)
         dataset.progress = 0.8
         db.commit()
+        self.update_state(state="PROGRESS", meta={"progress": 0.8})
 
         stats = etl_pipeline.metrics(df, rows_before)
         dataset.total_rows = stats["total_rows"]
@@ -38,15 +53,38 @@ def process_upload_task(self, dataset_id: int, file_bytes_hex: str):
         dataset.date_min = stats["date_min"]
         dataset.date_max = stats["date_max"]
         dataset.progress = 1.0
-        dataset.status = "completed"
+        dataset.status = Status.COMPLETED
         db.commit()
+        self.update_state(state="SUCCESS", meta={"progress": 1.0})
+
+    except SoftTimeLimitExceeded as e:
+        db.rollback()
+        if dataset is None:
+            dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if dataset:
+            dataset.status = Status.FAILED
+            dataset.error_message = "ERROR: Processing timed out"
+            db.commit()
+        raise e
+
+    except (OperationalError, SQLAlchemyError) as e:
+        db.rollback()
+        if dataset is None:
+            dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if dataset:
+            dataset.status = Status.PENDING
+            dataset.error_message = f"Retrying: {type(e).__name__}"
+            db.commit()
+        raise self.retry(exc=e, countdown=10)
 
     except Exception as e:
         db.rollback()
-        dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if dataset is None:
+            dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
         if dataset:
-            dataset.status = "failed"
-            dataset.error_message = str(e)
+            dataset.status = Status.FAILED
+            dataset.error_message = f"ERROR: {str(e)}"
             db.commit()
+
     finally:
         db.close()

@@ -1,5 +1,12 @@
 from app.etl.utils import safe_int, safe_float, safe_str, safe_date
 from typing import Any, Callable
+import enum
+
+class Status(enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 COLUMNS = [
     "ORDERNUMBER",
@@ -44,4 +51,3 @@ COLUMN_MAP: dict[str, tuple[str, Callable[[Any], Any]]] = {
     "COUNTRY":          ("country",            safe_str),
     "DEALSIZE":         ("deal_size",          safe_str),
 }
-

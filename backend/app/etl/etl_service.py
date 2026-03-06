@@ -1,6 +1,6 @@
 import io
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable
 
 import pandas as pd
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, Query
 
 from app.models import Dataset, SalesRecord
 from app.etl.tasks import process_upload_task
-from app.etl.etl_constants import COLUMN_MAP
+from app.etl.etl_constants import COLUMN_MAP, Status
 
 
 class ETLService:
@@ -128,7 +128,7 @@ class ETLService:
             "parquet": to_parquet_bytes,
         }
         formatter = exporters.get(fmt.lower(), to_csv_bytes)
-        
+
         return formatter(pd.DataFrame(df))
 
     async def upload_dataset(self, user_id: int, file: UploadFile):
@@ -137,13 +137,19 @@ class ETLService:
         dataset = Dataset(
             user_id=user_id,
             filename=file.filename or f"{uuid.uuid4()}.csv",
-            status="pending",
+            status=Status.PENDING,
             progress=0.0,
         )
         self.db.add(dataset)
         self.db.commit()
         self.db.refresh(dataset)
 
-        process_upload_task.delay(dataset.id, file_bytes.hex())
+        process_upload_task.apply_async(
+            args=[dataset.id, file_bytes.hex()],
+            eta=datetime.now(timezone.utc) + timedelta(seconds=1),
+            expires=3600,
+            retry=True,
+            retry_policy={"max_retries": 3},
+        )
 
         return dataset
