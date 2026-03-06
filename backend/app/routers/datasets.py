@@ -20,6 +20,7 @@ from app.schemas import (
 
 router = APIRouter()
 
+
 @router.get("/", response_model=Page[DatasetSummary])
 def list_datasets(
     current_user: User = Depends(get_current_user),
@@ -28,6 +29,7 @@ def list_datasets(
 ):
     query = etl.get_datasets_query(db, current_user.id)
     return paginate(db, query)
+
 
 @router.get("/{dataset_id}", response_model=DatasetSummary)
 #TODO : return upload progress
@@ -44,6 +46,7 @@ def get_dataset(
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
     return dataset
+
 
 @router.get("/{dataset_id}/records", response_model=Page[SalesRecordResponse])
 def get_dataset_records(
@@ -65,7 +68,7 @@ def get_dataset_records(
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
     query = etl.get_records_query(
-        db,
+        db=db,
         dataset_id=dataset_id,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -77,6 +80,7 @@ def get_dataset_records(
     )
 
     return paginate(db, query)
+
 
 @router.get("/{dataset_id}/statuses", response_model=list[str])
 def get_dataset_statuses(
@@ -92,6 +96,7 @@ def get_dataset_statuses(
 
     return etl.get_distinct_statuses(db, dataset_id)
 
+
 @router.get("/{dataset_id}/product-lines", response_model=list[str])
 def get_dataset_product_lines(
     dataset_id: int,
@@ -106,6 +111,7 @@ def get_dataset_product_lines(
 
     return etl.get_distinct_product_lines(db, dataset_id)
 
+
 @router.get("/{dataset_id}/countries", response_model=list[str])
 def get_dataset_countries(
     dataset_id: int,
@@ -119,6 +125,7 @@ def get_dataset_countries(
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
     return etl.get_distinct_countries(db, dataset_id)
+
 
 @router.get("/{dataset_id}/aggregates")
 def get_dataset_aggregates(
@@ -138,14 +145,15 @@ def get_dataset_aggregates(
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
     return etl.get_aggregates(
-        db,
-        dataset_id,
+        db=db,
+        dataset_id=dataset_id,
         status=status,
         product_line=product_line,
         country=country,
         date_from=date_from,
         date_to=date_to,
     )
+
 
 @router.get("/{dataset_id}/export")
 def export_dataset(
@@ -166,6 +174,7 @@ def export_dataset(
         headers={"Content-Disposition": f"attachment; filename={dataset_id}.{fmt}"},
     )
 
+
 @router.delete("/{dataset_id}")
 def delete_dataset(
     dataset_id: int,
@@ -180,6 +189,7 @@ def delete_dataset(
 
     return {"message": "Dataset deletion started", "dataset_id": dataset_id}
 
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_dataset(
     file: UploadFile = File(...),
@@ -191,6 +201,6 @@ async def upload_dataset(
 
     return UploadResponse(
         dataset_id=dataset.id,
-        status=dataset.status,
-        message="Uprocessing upload",
+        status=dataset.status.value,
+        message="Processing upload",
     )

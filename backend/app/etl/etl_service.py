@@ -135,11 +135,14 @@ class ETLService:
             .all()
         )
 
+        dialect = db.bind.dialect.name if db.bind else "postgresql"
+        if dialect == "sqlite":
+            month_expr = func.strftime('%Y-%m', SalesRecord.order_date).label("month")
+        else:
+            month_expr = func.to_char(SalesRecord.order_date, 'YYYY-MM').label("month")
+
         sales_over_time = (
-            base.with_entities(
-                func.to_char(SalesRecord.order_date, 'YYYY-MM').label("month"),
-                func.sum(SalesRecord.total_sales),
-            )
+            base.with_entities(month_expr, func.sum(SalesRecord.total_sales))
             .group_by("month")
             .order_by("month")
             .all()

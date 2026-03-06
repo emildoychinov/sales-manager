@@ -1,66 +1,68 @@
+from __future__ import annotations
+
 from datetime import date, datetime
-from app.etl.etl_constants import Status
-from sqlalchemy import (
-    Column,
-    Date,
-    DateTime,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    func,
-)
-from sqlalchemy.orm import relationship
+from typing import Optional
+
+from sqlalchemy import Enum, ForeignKey, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.database import Base
+from app.etl.etl_constants import Status
+
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(nullable=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(server_default=func.now())
 
-    datasets = relationship("Dataset", back_populates="owner")
+    datasets: Mapped[list[Dataset]] = relationship("Dataset", back_populates="owner")
+
 
 class Dataset(Base):
     __tablename__ = "datasets"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    filename = Column(String, nullable=False)
-    status = Column(Enum(Status, name="dataset_status"), default=Status.PENDING, nullable=False)
-    total_rows = Column(Integer, default=0)
-    rows_dropped = Column(Integer, default=0)
-    total_sales = Column(Float, default=0.0)
-    date_min = Column(Date, nullable=True)
-    date_max = Column(Date, nullable=True)
-    progress = Column(Float, default=0.0)
-    error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    filename: Mapped[str] = mapped_column(nullable=False)
+    status: Mapped[Status] = mapped_column(Enum(Status, name="dataset_status"), default=Status.PENDING, nullable=False)
+    total_rows: Mapped[int] = mapped_column(default=0)
+    rows_dropped: Mapped[int] = mapped_column(default=0)
+    total_sales: Mapped[float] = mapped_column(default=0.0)
+    date_min: Mapped[Optional[date]] = mapped_column(nullable=True)
+    date_max: Mapped[Optional[date]] = mapped_column(nullable=True)
+    progress: Mapped[float] = mapped_column(default=0.0)
+    error_message: Mapped[Optional[str]] = mapped_column(nullable=True)
+    created_at: Mapped[Optional[datetime]] = mapped_column(server_default=func.now())
 
-    owner = relationship("User", back_populates="datasets")
-    records = relationship("SalesRecord", back_populates="dataset", cascade="all, delete-orphan")
+    owner: Mapped[User] = relationship("User", back_populates="datasets")
+    records: Mapped[list[SalesRecord]] = relationship(
+        "SalesRecord", back_populates="dataset", cascade="all, delete-orphan"
+    )
+
 
 class SalesRecord(Base):
     __tablename__ = "sales_records"
 
-    id = Column(Integer, primary_key=True, index=True)
-    dataset_id = Column(Integer, ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    dataset_id: Mapped[int] = mapped_column(
+        ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
-    order_number = Column(Integer, nullable=True)
-    quantity_ordered = Column(Integer, nullable=True)
-    price_each = Column(Float, nullable=True)
-    sales = Column(Float, nullable=True)
-    total_sales = Column(Float, nullable=True)
-    order_date = Column(Date, nullable=True)
-    status = Column(String, nullable=True)
-    product_line = Column(String, nullable=True, index=True)
-    product_code = Column(String, nullable=True)
-    customer_name = Column(String, nullable=True)
-    city = Column(String, nullable=True)
-    country = Column(String, nullable=True, index=True)
-    deal_size = Column(String, nullable=True)
+    order_number: Mapped[Optional[int]] = mapped_column(nullable=True)
+    quantity_ordered: Mapped[Optional[int]] = mapped_column(nullable=True)
+    price_each: Mapped[Optional[float]] = mapped_column(nullable=True)
+    sales: Mapped[Optional[float]] = mapped_column(nullable=True)
+    total_sales: Mapped[Optional[float]] = mapped_column(nullable=True)
+    order_date: Mapped[Optional[date]] = mapped_column(nullable=True)
+    status: Mapped[Optional[str]] = mapped_column(nullable=True)
+    product_line: Mapped[Optional[str]] = mapped_column(nullable=True, index=True)
+    product_code: Mapped[Optional[str]] = mapped_column(nullable=True)
+    customer_name: Mapped[Optional[str]] = mapped_column(nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(nullable=True, index=True)
+    deal_size: Mapped[Optional[str]] = mapped_column(nullable=True)
 
-    dataset = relationship("Dataset", back_populates="records")
+    dataset: Mapped[Dataset] = relationship("Dataset", back_populates="records")

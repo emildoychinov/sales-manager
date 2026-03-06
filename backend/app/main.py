@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
@@ -9,10 +11,20 @@ from app.models import User, Dataset, SalesRecord
 from app.routers.auth import router as auth_router
 from app.routers.datasets import router as datasets_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    app.state.auth_service = AuthService()
+    app.state.etl_service = ETLService()
+    yield
+
+
 app = FastAPI(
     title="CSV Data Ingestion Pipeline",
     description="Upload sales CSVs, process via ETL, and view on a dashboard.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -22,12 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
-    app.state.auth_service = AuthService()
-    app.state.etl_service = ETLService()
 
 @app.get("/api/health")
 def health_check():
