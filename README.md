@@ -55,6 +55,30 @@ docker compose down -v         # stop + remove database volume
 
 Full interactive docs at `/docs` (Swagger) or `/redoc`.
 
+## Tests
+
+### Frontend (Vitest)
+| Library | Description |
+|---------|-------------|
+| vitest | test runner (replaces Jest for Vite) |
+| @testing-library/react | render components, query DOM |
+| @testing-library/user-event | user interactions |
+| @testing-library/jest-dom | matchers |
+| jsdom | DOM environment so Vitest can run component tests in Node |
+
+### Backend (pytest)
+| Library | Description |
+|---------|-------------|
+| pytest | test runner, fixtures, discovery |
+| FastAPI TestClient (httpx) | in-process HTTP requests for API integration tests |
+| unittest.mock | mock Celery tasks so no Redis/worker is required |
+
+### How to run
+```bash
+./run_tests.sh   # runs backend + frontend tests
+```
+
+
 ## Assumptions
 
 - **Dedup strategy**: duplicates are identified by `ORDERNUMBER + PRODUCTCODE`. We keep the last (latest?) occurence.
