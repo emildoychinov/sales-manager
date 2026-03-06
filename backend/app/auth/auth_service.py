@@ -18,13 +18,16 @@ class AuthService:
             
         hashed_password = hash_password(user.password)
         db_user = User(email=user.email, hashed_password=hashed_password)
+
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
+
         return db_user
 
     def login_user(self, email: str, password: str) -> Token:
         user = self.db.query(User).filter(User.email == email).first()
+
         if not user:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if not verify_password(password, user.hashed_password):
@@ -35,6 +38,7 @@ class AuthService:
     def get_current_user(self, token: str) -> User:
         user_id = verify_access_token(token, self.jwt_secret, self.jwt_algorithm)
         user = self.db.query(User).filter(User.id == user_id).first()
+        
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         return user

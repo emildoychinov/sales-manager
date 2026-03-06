@@ -34,6 +34,9 @@ const authSlice = createSlice({
       state.isAuthenticated = initialState.isAuthenticated;
       localStorage.removeItem(config.authToken);
     },
+    clearAuthError: (state) => {
+      state.errorMessage = "";
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -107,5 +110,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuth } = authSlice.actions;
+export const { clearAuth, clearAuthError } = authSlice.actions;
 export default authSlice.reducer;

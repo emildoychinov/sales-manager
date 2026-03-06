@@ -127,6 +127,7 @@ class ETLService:
             "csv": to_csv_bytes,
             "parquet": to_parquet_bytes,
         }
+        
         formatter = exporters.get(fmt.lower(), to_csv_bytes)
 
         return formatter(pd.DataFrame(df))
