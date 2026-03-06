@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AxiosError } from "axios";
 import datasetsApiRequests from "../../services/datasetsApiRequests";
-import type { PaginationParams, RecordsQueryParams } from "../../types";
+import type { DatasetFilters, PaginationParams, RecordsQueryParams } from "../../types";
 
 export const listDatasets = createAsyncThunk(
   "datasets/listDatasets",
@@ -58,9 +58,45 @@ export const getDatasetRecords = createAsyncThunk(
 
 export const getDatasetAggregates = createAsyncThunk(
   "datasets/getDatasetAggregates",
+  async (payload: { datasetId: number; filters?: DatasetFilters }): Promise<unknown | AxiosError> => {
+    try {
+      const response = await datasetsApiRequests.getAggregates(payload.datasetId, payload.filters);
+      return response.data;
+    } catch (err) {
+      return err as AxiosError;
+    }
+  }
+);
+
+export const getDatasetStatuses = createAsyncThunk(
+  "datasets/getDatasetStatuses",
   async (datasetId: number): Promise<unknown | AxiosError> => {
     try {
-      const response = await datasetsApiRequests.getAggregates(datasetId);
+      const response = await datasetsApiRequests.getStatuses(datasetId);
+      return response.data;
+    } catch (err) {
+      return err as AxiosError;
+    }
+  }
+);
+
+export const getDatasetProductLines = createAsyncThunk(
+  "datasets/getDatasetProductLines",
+  async (datasetId: number): Promise<unknown | AxiosError> => {
+    try {
+      const response = await datasetsApiRequests.getProductLines(datasetId);
+      return response.data;
+    } catch (err) {
+      return err as AxiosError;
+    }
+  }
+);
+
+export const getDatasetCountries = createAsyncThunk(
+  "datasets/getDatasetCountries",
+  async (datasetId: number): Promise<unknown | AxiosError> => {
+    try {
+      const response = await datasetsApiRequests.getCountries(datasetId);
       return response.data;
     } catch (err) {
       return err as AxiosError;

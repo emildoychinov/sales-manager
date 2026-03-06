@@ -9,6 +9,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  TableSortLabel,
   Typography,
 } from "@mui/material";
 import type { DataTableProps } from "../../types";
@@ -22,34 +23,53 @@ export function DataTable<T>({
   onPageChange,
   onRowsPerPageChange,
   onRowClick,
+  sortBy,
+  sortOrder,
+  onSortChange,
   loading = false,
   emptyMessage = "No data",
   rowKey,
+  maxHeight = 500,
 }: DataTableProps<T>) {
-  
   return (
     <Paper variant="outlined">
       <Box sx={{ height: 2 }}>{loading && <LinearProgress />}</Box>
-      <TableContainer>
-        <Table size="small">
+      <TableContainer sx={{ maxHeight }}>
+        <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.id}
-                  align={col.align ?? "left"}
-                  sx={{
-                    minWidth: col.minWidth,
-                    fontWeight: 600,
-                    fontSize: "0.75rem",
-                    color: "text.secondary",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
+              {columns.map((col) => {
+                const canSort = col.sortable && onSortChange;
+                const isActive = canSort && sortBy === col.id;
+
+                return (
+                  <TableCell
+                    key={col.id}
+                    align={col.align ?? "left"}
+                    sortDirection={isActive ? sortOrder : false}
+                    sx={{
+                      minWidth: col.minWidth,
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      color: "text.secondary",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {canSort ? (
+                      <TableSortLabel
+                        active={!!isActive}
+                        direction={isActive ? sortOrder : "asc"}
+                        onClick={() => onSortChange(col.id)}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    ) : (
+                      col.label
+                    )}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           </TableHead>
           <TableBody>

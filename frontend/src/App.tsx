@@ -7,9 +7,10 @@ import {
   ThemeProvider,
   Typography,
 } from "@mui/material";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AuthForm } from "./components/AuthForm/AuthForm";
 import { DatasetsPage } from "./pages/DatasetsPage";
+import { DatasetDetailPage } from "./pages/DatasetDetailPage";
 import { config } from "./config";
 import { useDispatch, useSelector } from "./store/hooks";
 import { fetchMe } from "./store/middlewares/authMiddleware";
@@ -20,6 +21,7 @@ import "./App.css";
 function AppContent() {
   const dispatch = useDispatch();
   const auth = useSelector((s) => s.auth);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem(config.authToken);
@@ -30,6 +32,8 @@ function AppContent() {
 
   const hasToken = typeof window !== "undefined" && !!localStorage.getItem(config.authToken);
   const checkingAuth = hasToken && !auth.isAuthenticated && auth.isLoading;
+
+  const handleBack = useCallback(() => setSelectedDatasetId(null), []);
 
   if (checkingAuth) {
     return (
@@ -56,7 +60,11 @@ function AppContent() {
           </Button>
         </Box>
       </Box>
-      <DatasetsPage />
+      {selectedDatasetId != null ? (
+        <DatasetDetailPage datasetId={selectedDatasetId} onBack={handleBack} />
+      ) : (
+        <DatasetsPage onDatasetClick={setSelectedDatasetId} />
+      )}
     </Container>
   );
 }

@@ -1,15 +1,20 @@
 import { Box } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { ConfirmDialog } from "../components/ConfirmDialog/ConfirmDialog";
 import { FileDropZone } from "../components/FileDropZone/FileDropZone";
 import { DatasetTable } from "./DatasetTable";
 import { useDispatch, useSelector } from "../store/hooks";
-import { deleteDataset, listDatasets, pollDatasets, uploadDataset } from "../store/middlewares";
+import { deleteDataset, exportDataset, listDatasets, pollDatasets, uploadDataset } from "../store/middlewares";
 import { DatasetStatus, type DatasetSummary } from "../types";
 
 const POLL_INTERVAL = 500;
 
-export function DatasetsPage() {
+interface DatasetsPageProps {
+  onDatasetClick?: (datasetId: number) => void;
+}
+
+export function DatasetsPage({ onDatasetClick }: DatasetsPageProps) {
   const dispatch = useDispatch();
   const { datasets, datasetsTotal, isLoading, errorMessage } = useSelector((s) => s.datasets);
   const [page, setPage] = useState(0);
@@ -60,9 +65,29 @@ export function DatasetsPage() {
     setRefreshTrigger((t) => t + 1);
   }, [deleteTarget, dispatch]);
 
-  const handleRowClick = useCallback((row: DatasetSummary) => {
-    console.log("Dataset clicked:", row);
-  }, []);
+  const handleRowClick = useCallback(
+    (row: DatasetSummary) => {
+      onDatasetClick?.(row.id);
+    },
+    [onDatasetClick],
+  );
+
+  const handleExportClick = useCallback(
+    async (row: DatasetSummary, fmt: "csv" | "parquet") => {
+      const result = await dispatch(exportDataset({ datasetId: row.id, fmt }));
+      const payload = result.payload;
+      if (payload && !isAxiosError(payload) && payload instanceof Blob) {
+        const url = URL.createObjectURL(payload);
+        const a = document.createElement("a");
+        a.href = url;
+        const base = row.filename.replace(/\.csv$/i, "");
+        a.download = `${base}_export.${fmt}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    },
+    [dispatch],
+  );
 
   return (
     <Box>
@@ -78,6 +103,7 @@ export function DatasetsPage() {
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
         onRowClick={handleRowClick}
+        onExportClick={handleExportClick}
         onDeleteClick={setDeleteTarget}
       />
 

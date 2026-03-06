@@ -28,7 +28,8 @@ export interface DatasetsState {
   datasetsTotal: number;
   selectedDataset: DatasetSummary | null;
   records: unknown;
-  aggregates: unknown;
+  aggregates: DatasetAggregates | null;
+  aggregatesLoading: boolean;
   isLoading: boolean;
   errorMessage: string | null;
 }
@@ -36,6 +37,7 @@ export interface DatasetsState {
 export interface DatasetFilters {
   status?: string;
   productLine?: string;
+  country?: string;
   dateFrom?: string;
   dateTo?: string;
 }
@@ -52,4 +54,40 @@ export enum DatasetStatus {
   COMPLETED = "completed",
   FAILED = "failed",
   DELETING = "deleting",
+}
+
+export interface SalesRecord {
+  id: number;
+  order_number: number | null;
+  quantity_ordered: number | null;
+  price_each: number | null;
+  sales: number | null;
+  total_sales: number | null;
+  order_date: string | null;
+  status: string | null;
+  product_line: string | null;
+  product_code: string | null;
+  customer_name: string | null;
+  city: string | null;
+  country: string | null;
+  deal_size: string | null;
+}
+
+export interface PaginatedRecordsResponse {
+  items: SalesRecord[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface AggregateItem {
+  label: string;
+  value: number;
+}
+
+export interface DatasetAggregates {
+  sales_by_product_line: AggregateItem[];
+  sales_by_country: AggregateItem[];
+  sales_over_time: AggregateItem[];
 }

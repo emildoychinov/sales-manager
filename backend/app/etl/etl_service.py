@@ -5,7 +5,6 @@ from typing import Callable
 
 import pandas as pd
 from fastapi import UploadFile
-from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import func
 from sqlalchemy.orm import Session, Query
 
@@ -15,36 +14,35 @@ from app.etl.etl_constants import COLUMN_MAP, Status
 
 
 class ETLService:
-    def __init__(self, db: Session):
-        self.db = db
 
-    def get_datasets_query(self, user_id: int) -> Query:
+    def get_datasets_query(self, db: Session, user_id: int) -> Query:
         return (
-            self.db.query(Dataset)
+            db.query(Dataset)
             .filter(Dataset.user_id == user_id)
             .order_by(Dataset.created_at.desc())
         )
 
     def get_records_query(
         self,
+        db: Session,
         dataset_id: int,
         sort_by: str = "id",
         sort_order: str = "asc",
         status: str | None = None,
         product_line: str | None = None,
+        country: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
     ) -> Query:
-        query = self.db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
+        query = db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
 
-
-        #filtering could probably be moved out in a param -> schema mapping so that we don't use so much ifs
-        #this would also allow for more flexible filtering in the future
-
+        # there is probably a better way to do this
         if status:
             query = query.filter(SalesRecord.status == status)
         if product_line:
             query = query.filter(SalesRecord.product_line == product_line)
+        if country:
+            query = query.filter(SalesRecord.country == country)
         if date_from:
             query = query.filter(SalesRecord.order_date >= date_from)
         if date_to:
@@ -57,34 +55,91 @@ class ETLService:
 
         return query
 
-    def get_dataset_by_id(self, dataset_id: int, user_id: int) -> Dataset | None:
+    def get_dataset_by_id(self, db: Session, dataset_id: int, user_id: int) -> Dataset | None:
         return (
-            self.db.query(Dataset)
+            db.query(Dataset)
             .filter(Dataset.id == dataset_id, Dataset.user_id == user_id)
             .first()
         )
 
-    def get_aggregates(self, dataset_id: int) -> dict:
+    def get_distinct_statuses(self, db: Session, dataset_id: int) -> list[str]:
+        rows = (
+            db.query(SalesRecord.status)
+            .filter(SalesRecord.dataset_id == dataset_id, SalesRecord.status.isnot(None))
+            .distinct()
+            .order_by(SalesRecord.status)
+            .all()
+        )
+        return [r[0] for r in rows]
+
+    def get_distinct_product_lines(self, db: Session, dataset_id: int) -> list[str]:
+        rows = (
+            db.query(SalesRecord.product_line)
+            .filter(SalesRecord.dataset_id == dataset_id, SalesRecord.product_line.isnot(None))
+            .distinct()
+            .order_by(SalesRecord.product_line)
+            .all()
+        )
+        return [r[0] for r in rows]
+
+    def get_distinct_countries(self, db: Session, dataset_id: int) -> list[str]:
+        rows = (
+            db.query(SalesRecord.country)
+            .filter(SalesRecord.dataset_id == dataset_id, SalesRecord.country.isnot(None))
+            .distinct()
+            .order_by(SalesRecord.country)
+            .all()
+        )
+        return [r[0] for r in rows]
+
+    def _apply_record_filters(self, query, dataset_id: int, status: str | None = None,
+                               product_line: str | None = None, country: str | None = None,
+                               date_from: date | None = None, date_to: date | None = None):
+
+        # there is probably a better way to do this
+        query = query.filter(SalesRecord.dataset_id == dataset_id)
+        if status:
+            query = query.filter(SalesRecord.status == status)
+        if product_line:
+            query = query.filter(SalesRecord.product_line == product_line)
+        if country:
+            query = query.filter(SalesRecord.country == country)
+        if date_from:
+            query = query.filter(SalesRecord.order_date >= date_from)
+        if date_to:
+            query = query.filter(SalesRecord.order_date <= date_to)
+        return query
+
+    def get_aggregates(
+        self,
+        db: Session,
+        dataset_id: int,
+        status: str | None = None,
+        product_line: str | None = None,
+        country: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> dict:
+        base = db.query(SalesRecord)
+        base = self._apply_record_filters(base, dataset_id, status, product_line, country, date_from, date_to)
+
         sales_by_product_line = (
-            self.db.query(SalesRecord.product_line, func.sum(SalesRecord.total_sales))
-            .filter(SalesRecord.dataset_id == dataset_id)
+            base.with_entities(SalesRecord.product_line, func.sum(SalesRecord.total_sales))
             .group_by(SalesRecord.product_line)
             .all()
         )
 
         sales_by_country = (
-            self.db.query(SalesRecord.country, func.sum(SalesRecord.total_sales))
-            .filter(SalesRecord.dataset_id == dataset_id)
+            base.with_entities(SalesRecord.country, func.sum(SalesRecord.total_sales))
             .group_by(SalesRecord.country)
             .all()
         )
 
         sales_over_time = (
-            self.db.query(
+            base.with_entities(
                 func.to_char(SalesRecord.order_date, 'YYYY-MM').label("month"),
                 func.sum(SalesRecord.total_sales),
             )
-            .filter(SalesRecord.dataset_id == dataset_id)
             .group_by("month")
             .order_by("month")
             .all()
@@ -105,14 +160,14 @@ class ETLService:
             ],
         }
 
-    def export_dataset(self, dataset_id: int, user_id: int, fmt: str = "csv") -> bytes | None:
-        dataset = self.get_dataset_by_id(dataset_id, user_id)
+    def export_dataset(self, db: Session, dataset_id: int, user_id: int, fmt: str = "csv") -> bytes | None:
+        dataset = self.get_dataset_by_id(db, dataset_id, user_id)
         if not dataset:
             return None
 
-        query = self.db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
+        query = db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
         export_columns = [field for field, _ in COLUMN_MAP.values()]
-        df = pd.read_sql(query.statement, self.db.bind)[export_columns]
+        df = pd.read_sql(query.statement, db.bind)[export_columns]
 
         def to_csv_bytes(d: pd.DataFrame) -> bytes:
             return d.to_csv(index=False).encode("utf-8")
@@ -131,7 +186,7 @@ class ETLService:
 
         return formatter(pd.DataFrame(df))
 
-    async def upload_dataset(self, user_id: int, file: UploadFile):
+    async def upload_dataset(self, db: Session, user_id: int, file: UploadFile):
         file_bytes = await file.read()
 
         dataset = Dataset(
@@ -140,9 +195,9 @@ class ETLService:
             status=Status.PENDING,
             progress=0.0,
         )
-        self.db.add(dataset)
-        self.db.commit()
-        self.db.refresh(dataset)
+        db.add(dataset)
+        db.commit()
+        db.refresh(dataset)
 
         process_upload_task.apply_async(
             args=[dataset.id, file_bytes.hex()],
@@ -154,13 +209,13 @@ class ETLService:
 
         return dataset
 
-    def delete_dataset(self, dataset_id: int, user_id: int) -> Dataset | None:
-        dataset = self.get_dataset_by_id(dataset_id, user_id)
+    def delete_dataset(self, db: Session, dataset_id: int, user_id: int) -> Dataset | None:
+        dataset = self.get_dataset_by_id(db, dataset_id, user_id)
         if not dataset:
             return None
 
         dataset.status = Status.DELETING
-        self.db.commit()
+        db.commit()
 
         delete_dataset_task.apply_async(
             args=[dataset.id],

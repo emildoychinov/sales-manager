@@ -9,7 +9,7 @@ import {
   uploadDataset,
   deleteDataset,
 } from "../middlewares/datasetsMiddleware";
-import type { DatasetSummary, DatasetsState, PaginatedDatasetsResponse } from "../../types";
+import type { DatasetAggregates, DatasetSummary, DatasetsState, PaginatedDatasetsResponse } from "../../types";
 
 const initialState: DatasetsState = {
   datasets: [],
@@ -17,6 +17,7 @@ const initialState: DatasetsState = {
   selectedDataset: null,
   records: null,
   aggregates: null,
+  aggregatesLoading: false,
   isLoading: false,
   errorMessage: null,
 };
@@ -87,10 +88,17 @@ const datasetsSlice = createSlice({
       .addCase(getDatasetRecords.rejected, (state) => {
         state.isLoading = false;
       })
+      .addCase(getDatasetAggregates.pending, (state) => {
+        state.aggregatesLoading = true;
+      })
       .addCase(getDatasetAggregates.fulfilled, (state, action) => {
         if (!isAxiosError(action.payload)) {
-          state.aggregates = action.payload;
+          state.aggregates = action.payload as DatasetAggregates;
         }
+        state.aggregatesLoading = false;
+      })
+      .addCase(getDatasetAggregates.rejected, (state) => {
+        state.aggregatesLoading = false;
       })
       .addCase(uploadDataset.pending, (state) => {
         state.isLoading = true;

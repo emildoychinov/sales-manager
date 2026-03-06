@@ -7,11 +7,10 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_etl_service
 from app.etl.etl_service import ETLService
 from app.models import User
 from app.schemas import (
-    AggregateItem,
     DatasetSummary,
     SalesRecordResponse,
     UploadResponse,
@@ -25,8 +24,9 @@ router = APIRouter()
 def list_datasets(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    query = ETLService(db).get_datasets_query(current_user.id)
+    query = etl.get_datasets_query(db, current_user.id)
     return paginate(db, query)
 
 @router.get("/{dataset_id}", response_model=DatasetSummary)
@@ -36,8 +36,9 @@ def get_dataset(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    dataset = ETLService(db).get_dataset_by_id(dataset_id, current_user.id)
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
 
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
@@ -51,42 +52,100 @@ def get_dataset_records(
     sort_order: str = "asc",
     status: str | None = None,
     product_line: str | None = None,
+    country: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    service = ETLService(db)
-    dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
 
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
-    query = service.get_records_query(
+    query = etl.get_records_query(
+        db,
         dataset_id=dataset_id,
         sort_by=sort_by,
         sort_order=sort_order,
         status=status,
         product_line=product_line,
+        country=country,
         date_from=date_from,
         date_to=date_to,
     )
 
     return paginate(db, query)
 
-@router.get("/{dataset_id}/aggregates")
-def get_dataset_aggregates(
+@router.get("/{dataset_id}/statuses", response_model=list[str])
+def get_dataset_statuses(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    service = ETLService(db)
-    dataset = service.get_dataset_by_id(dataset_id, current_user.id)
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
 
     if not dataset:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
 
-    return service.get_aggregates(dataset_id)
+    return etl.get_distinct_statuses(db, dataset_id)
+
+@router.get("/{dataset_id}/product-lines", response_model=list[str])
+def get_dataset_product_lines(
+    dataset_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
+):
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
+    return etl.get_distinct_product_lines(db, dataset_id)
+
+@router.get("/{dataset_id}/countries", response_model=list[str])
+def get_dataset_countries(
+    dataset_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
+):
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
+    return etl.get_distinct_countries(db, dataset_id)
+
+@router.get("/{dataset_id}/aggregates")
+def get_dataset_aggregates(
+    dataset_id: int,
+    status: str | None = None,
+    product_line: str | None = None,
+    country: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
+):
+    dataset = etl.get_dataset_by_id(db, dataset_id, current_user.id)
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
+
+    return etl.get_aggregates(
+        db,
+        dataset_id,
+        status=status,
+        product_line=product_line,
+        country=country,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 @router.get("/{dataset_id}/export")
 def export_dataset(
@@ -94,8 +153,9 @@ def export_dataset(
     fmt: str = Query(default="csv", pattern="^(csv|parquet)$"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    data = ETLService(db).export_dataset(dataset_id, current_user.id, fmt)
+    data = etl.export_dataset(db, dataset_id, current_user.id, fmt)
 
     if data is None:
         raise HTTPException(status_code=404, detail="ERROR: Dataset not found")
@@ -111,8 +171,9 @@ def delete_dataset(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    dataset = ETLService(db).delete_dataset(dataset_id, current_user.id)
+    dataset = etl.delete_dataset(db, dataset_id, current_user.id)
 
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -124,8 +185,9 @@ async def upload_dataset(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    etl: ETLService = Depends(get_etl_service),
 ):
-    dataset = await ETLService(db).upload_dataset(current_user.id, file)
+    dataset = await etl.upload_dataset(db, current_user.id, file)
 
     return UploadResponse(
         dataset_id=dataset.id,
