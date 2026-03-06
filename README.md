@@ -35,7 +35,7 @@ docker compose down -v         # stop + remove database volume
 ### Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | regiset (create) user |
+| POST | `/api/auth/register` | register (create) user |
 | POST | `/api/auth/login` | login, JWT access token |
 | GET | `/api/auth/me` | current user info - in the FE it's used to check if the user is authenticated upon entry |
 
