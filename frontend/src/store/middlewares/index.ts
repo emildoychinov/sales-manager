@@ -6,6 +6,7 @@ export {
 
 export {
   listDatasets,
+  pollDatasets,
   getDatasetById,
   getDatasetRecords,
   getDatasetAggregates,
