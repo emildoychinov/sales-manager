@@ -2,23 +2,23 @@ import { Box, Chip, IconButton, LinearProgress, Typography } from "@mui/material
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { DataTable } from "../components/DataTable/DataTable";
 import { formatCurrency, formatDate } from "../utils/format";
-import type { Column, DatasetSummary } from "../types";
+import { DatasetStatus, type Column, type DatasetSummary } from "../types";
 
 const STATUS_COLOR: Record<string, "default" | "warning" | "info" | "success" | "error"> = {
-  pending: "warning",
-  processing: "info",
-  completed: "success",
-  failed: "error",
-  deleting: "default",
+  [DatasetStatus.PENDING]: "warning",
+  [DatasetStatus.PROCESSING]: "info",
+  [DatasetStatus.COMPLETED]: "success",
+  [DatasetStatus.FAILED]: "error",
+  [DatasetStatus.DELETING]: "default",
 };
 
 function StatusCell({ row }: { row: DatasetSummary }) {
-  const active = row.status === "processing" || row.status === "pending";
+  const active = row.status === DatasetStatus.PROCESSING || row.status === DatasetStatus.PENDING;
   return (
     <Box sx={{ minWidth: 120 }}>
       <Chip
         label={row.status}
-        color={STATUS_COLOR[row.status] ?? "default"}
+        color={STATUS_COLOR[row.status as DatasetStatus] ?? "default"}
         size="small"
         variant="outlined"
         sx={{ textTransform: "capitalize", fontWeight: 500 }}

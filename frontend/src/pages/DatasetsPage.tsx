@@ -5,7 +5,7 @@ import { FileDropZone } from "../components/FileDropZone/FileDropZone";
 import { DatasetTable } from "./DatasetTable";
 import { useDispatch, useSelector } from "../store/hooks";
 import { deleteDataset, listDatasets, pollDatasets, uploadDataset } from "../store/middlewares";
-import type { DatasetSummary } from "../types";
+import { DatasetStatus, type DatasetSummary } from "../types";
 
 const POLL_INTERVAL = 500;
 
@@ -25,7 +25,7 @@ export function DatasetsPage() {
   }, [dispatch, page, rowsPerPage, refreshTrigger]);
 
   const hasActiveJobs = datasets.some(
-    (d) => d.status === "processing" || d.status === "pending" || d.status === "deleting",
+    (d) => d.status === DatasetStatus.PROCESSING || d.status === DatasetStatus.PENDING || d.status === DatasetStatus.DELETING,
   );
 
   useEffect(() => {

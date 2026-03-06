@@ -45,3 +45,11 @@ export interface RecordsQueryParams extends DatasetFilters {
   sortOrder?: "asc" | "desc";
   paginationParams?: PaginationParams;
 }
+
+export enum DatasetStatus {
+  PENDING = "pending",
+  PROCESSING = "processing",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  DELETING = "deleting",
+}
