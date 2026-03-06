@@ -1,8 +1,10 @@
 from datetime import date, datetime
+from app.etl.etl_constants import Status
 from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -28,7 +30,7 @@ class Dataset(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     filename = Column(String, nullable=False)
-    status = Column(String, default="pending")  # pending /processing / completed / failed
+    status = Column(Enum(Status, name="dataset_status"), default=Status.PENDING, nullable=False)
     total_rows = Column(Integer, default=0)
     rows_dropped = Column(Integer, default=0)
     total_sales = Column(Float, default=0.0)

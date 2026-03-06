@@ -8,9 +8,12 @@ passlib[bcrypt]
 PyJWT
 python-multipart
 pandas
+pyarrow
 celery
 redis
 pydantic-settings
 email-validator
+fastapi-pagination
 pytest
 httpx
+kagglehub

@@ -23,8 +23,8 @@ def verify_access_token(token: str, secret: str, algorithm: str) -> int:
         payload = jwt.decode(token, secret, algorithms=[algorithm])
         return payload["sub"]
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
+        raise HTTPException(status_code=401, detail="ERROR: Token has expired")
     except jwt.InvalidTokenError as e:
         print("JWT InvalidTokenError:", type(e).__name__, str(e))
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="ERROR: Invalid token")
         
