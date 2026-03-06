@@ -10,7 +10,11 @@ import { DatasetStatus, type DatasetSummary } from "../types";
 
 const POLL_INTERVAL = 500;
 
-export function DatasetsPage() {
+interface DatasetsPageProps {
+  onDatasetClick?: (datasetId: number) => void;
+}
+
+export function DatasetsPage({ onDatasetClick }: DatasetsPageProps) {
   const dispatch = useDispatch();
   const { datasets, datasetsTotal, isLoading, errorMessage } = useSelector((s) => s.datasets);
   const [page, setPage] = useState(0);
@@ -61,9 +65,12 @@ export function DatasetsPage() {
     setRefreshTrigger((t) => t + 1);
   }, [deleteTarget, dispatch]);
 
-  const handleRowClick = useCallback((row: DatasetSummary) => {
-    console.log("Dataset clicked:", row);
-  }, []);
+  const handleRowClick = useCallback(
+    (row: DatasetSummary) => {
+      onDatasetClick?.(row.id);
+    },
+    [onDatasetClick],
+  );
 
   const handleExportClick = useCallback(
     async (row: DatasetSummary, fmt: "csv" | "parquet") => {
