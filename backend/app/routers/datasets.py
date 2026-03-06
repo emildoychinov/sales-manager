@@ -18,6 +18,8 @@ from app.schemas import (
     UploadResponse,
 )
 
+#TODO : add sockets for real-time UI updates
+
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -95,7 +97,7 @@ def get_dataset_aggregates(
 @router.get("/{dataset_id}/export")
 def export_dataset(
     dataset_id: int,
-    fmt: str = Query(default="csv", pattern="^(csv)$"),
+    fmt: str = Query(default="csv", pattern="^(csv|parquet)$"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -105,7 +107,7 @@ def export_dataset(
     return Response(
         content=data,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={dataset_id}.csv"},
+        headers={"Content-Disposition": f"attachment; filename={dataset_id}.{fmt}"},
     )
 
 

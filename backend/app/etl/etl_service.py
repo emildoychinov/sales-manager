@@ -1,8 +1,9 @@
-import csv
 import io
 import uuid
 from datetime import date
+from typing import Callable
 
+import pandas as pd
 from fastapi import UploadFile
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import func
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session, Query
 
 from app.models import Dataset, SalesRecord
 from app.etl.tasks import process_upload_task
+from app.etl.etl_constants import COLUMN_MAP
 
 
 class ETLService:
@@ -35,6 +37,10 @@ class ETLService:
         date_to: date | None = None,
     ) -> Query:
         query = self.db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
+
+
+        #filtering could probably be moved out in a param -> schema mapping so that we don't use so much ifs
+        #this would also allow for more flexible filtering in the future
 
         if status:
             query = query.filter(SalesRecord.status == status)
@@ -87,15 +93,15 @@ class ETLService:
 
         return {
             "sales_by_product_line": [
-                {"label": r[0] or "Unknown", "value": round(float(r[1] or 0), 2)}
+                {"label": r[0] or "", "value": round(float(r[1] or 0), 2)}
                 for r in sales_by_product_line
             ],
             "sales_by_country": [
-                {"label": r[0] or "Unknown", "value": round(float(r[1] or 0), 2)}
+                {"label": r[0] or "", "value": round(float(r[1] or 0), 2)}
                 for r in sales_by_country
             ],
             "sales_over_time": [
-                {"label": r[0] or "Unknown", "value": round(float(r[1] or 0), 2)}
+                {"label": r[0] or "", "value": round(float(r[1] or 0), 2)}
                 for r in sales_over_time
             ],
         }
@@ -105,29 +111,25 @@ class ETLService:
         if not dataset:
             return None
 
-        records = (
-            self.db.query(SalesRecord)
-            .filter(SalesRecord.dataset_id == dataset_id)
-            .all()
-        )
+        query = self.db.query(SalesRecord).filter(SalesRecord.dataset_id == dataset_id)
+        export_columns = [field for field, _ in COLUMN_MAP.values()]
+        df = pd.read_sql(query.statement, self.db.bind)[export_columns]
 
-        if fmt == "csv":
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow([
-                "order_number", "quantity_ordered", "price_each", "sales",
-                "total_sales", "order_date", "status", "product_line",
-                "product_code", "customer_name", "city", "country", "deal_size",
-            ])
-            for r in records:
-                writer.writerow([
-                    r.order_number, r.quantity_ordered, r.price_each, r.sales,
-                    r.total_sales, r.order_date, r.status, r.product_line,
-                    r.product_code, r.customer_name, r.city, r.country, r.deal_size,
-                ])
-            return output.getvalue().encode("utf-8")
+        def to_csv_bytes(d: pd.DataFrame) -> bytes:
+            return d.to_csv(index=False).encode("utf-8")
 
-        return None
+        def to_parquet_bytes(d: pd.DataFrame) -> bytes:
+            buf = io.BytesIO()
+            d.to_parquet(buf, index=False)
+            return buf.getvalue()
+
+        exporters: dict[str, Callable[[pd.DataFrame], bytes]] = {
+            "csv": to_csv_bytes,
+            "parquet": to_parquet_bytes,
+        }
+        formatter = exporters.get(fmt.lower(), to_csv_bytes)
+        
+        return formatter(pd.DataFrame(df))
 
     async def upload_dataset(self, user_id: int, file: UploadFile):
         file_bytes = await file.read()

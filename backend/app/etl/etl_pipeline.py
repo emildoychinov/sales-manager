@@ -2,35 +2,8 @@ import pandas as pd
 import io
 from sqlalchemy.orm import Session
 from app.models import SalesRecord
-from app.etl.utils import safe_int, safe_float, safe_str, safe_date
-
-COLUMNS = [
-    "ORDERNUMBER",
-    "QUANTITYORDERED",
-    "PRICEEACH",
-    "ORDERLINENUMBER",
-    "SALES",
-    "ORDERDATE",
-    "STATUS",
-    "QTR_ID",
-    "MONTH_ID",
-    "YEAR_ID",
-    "PRODUCTLINE",
-    "MSRP",
-    "PRODUCTCODE",
-    "CUSTOMERNAME",
-    "PHONE",
-    "ADDRESSLINE1",
-    "ADDRESSLINE2",
-    "CITY",
-    "STATE",
-    "POSTALCODE",
-    "COUNTRY",
-    "TERRITORY",
-    "CONTACTLASTNAME",
-    "CONTACTFIRSTNAME",
-    "DEALSIZE",
-]
+from app.etl.utils import safe_date
+from app.etl.etl_constants import COLUMNS, COLUMN_MAP
 
 def extract(file: bytes) -> pd.DataFrame:
     try:
@@ -79,19 +52,7 @@ def load(data_frame: pd.DataFrame, dataset_id: int, db: Session) -> None:
         records = [
             SalesRecord(
                 dataset_id=dataset_id,
-                order_number=safe_int(row["ORDERNUMBER"]),
-                quantity_ordered=safe_int(row["QUANTITYORDERED"]),
-                price_each=safe_float(row["PRICEEACH"]),
-                sales=safe_float(row["SALES"]),
-                total_sales=safe_float(row["TOTAL_SALES"]),
-                order_date=safe_date(row["ORDERDATE"]),
-                status=safe_str(row["STATUS"]),
-                product_line=safe_str(row["PRODUCTLINE"]),
-                product_code=safe_str(row["PRODUCTCODE"]),
-                customer_name=safe_str(row["CUSTOMERNAME"]),
-                city=safe_str(row["CITY"]),
-                country=safe_str(row["COUNTRY"]),
-                deal_size=safe_str(row["DEALSIZE"]),
+                **{field: conv(row[csv_col]) for csv_col, (field, conv) in COLUMN_MAP.items()},
             )
             for _, row in data_frame.iterrows()
         ]
