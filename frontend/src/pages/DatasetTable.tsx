@@ -1,8 +1,20 @@
-import { Box, Chip, IconButton, LinearProgress, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  IconButton,
+  LinearProgress,
+  Menu,
+  MenuItem,
+  Typography,
+} from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import { useState } from "react";
 import { DataTable } from "../components/DataTable/DataTable";
 import { formatCurrency, formatDate } from "../utils/format";
 import { DatasetStatus, type Column, type DatasetSummary } from "../types";
+
+export type ExportFormat = "csv" | "parquet";
 
 const STATUS_COLOR: Record<string, "default" | "warning" | "info" | "success" | "error"> = {
   [DatasetStatus.PENDING]: "warning",
@@ -44,6 +56,7 @@ export interface DatasetTableProps {
   onPageChange: (page: number) => void;
   onRowsPerPageChange: (rowsPerPage: number) => void;
   onRowClick?: (row: DatasetSummary) => void;
+  onExportClick?: (row: DatasetSummary, fmt: ExportFormat) => void;
   onDeleteClick?: (row: DatasetSummary) => void;
 }
 
@@ -57,8 +70,25 @@ export function DatasetTable({
   onPageChange,
   onRowsPerPageChange,
   onRowClick,
+  onExportClick,
   onDeleteClick,
 }: DatasetTableProps) {
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<{ el: HTMLElement; row: DatasetSummary } | null>(null);
+
+  const handleExportButtonClick = (e: React.MouseEvent<HTMLElement>, row: DatasetSummary) => {
+    e.stopPropagation();
+    setExportMenuAnchor({ el: e.currentTarget, row });
+  };
+
+  const handleExportMenuClose = () => setExportMenuAnchor(null);
+
+  const handleExportFormatClick = (fmt: ExportFormat) => {
+    if (exportMenuAnchor) {
+      onExportClick?.(exportMenuAnchor.row, fmt);
+      handleExportMenuClose();
+    }
+  };
+
   const columns: Column<DatasetSummary>[] = [
     { id: "id", label: "ID", minWidth: 50 },
     { id: "filename", label: "File", minWidth: 160 },
@@ -92,19 +122,32 @@ export function DatasetTable({
       id: "actions",
       label: "",
       align: "right",
-      minWidth: 48,
-      render: (row) =>
-        onDeleteClick ? (
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteClick(row);
-            }}
-          >
-            <DeleteOutlineIcon fontSize="small" />
-          </IconButton>
-        ) : null,
+      minWidth: 80,
+      render: (row) => (
+        <Box component="span" sx={{ display: "inline-flex", gap: 0.25 }}>
+          {onExportClick && row.status === DatasetStatus.COMPLETED && (
+            <IconButton
+              size="small"
+              onClick={(e) => handleExportButtonClick(e, row)}
+              title="Export"
+            >
+              <FileDownloadOutlinedIcon fontSize="small" />
+            </IconButton>
+          )}
+          {onDeleteClick ? (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(row);
+              }}
+              title="Delete"
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          ) : null}
+        </Box>
+      ),
     },
   ];
 
@@ -128,6 +171,16 @@ export function DatasetTable({
         emptyMessage="No datasets yet. Upload a CSV to get started."
         rowKey={(row) => row.id}
       />
+      <Menu
+        anchorEl={exportMenuAnchor?.el}
+        open={!!exportMenuAnchor}
+        onClose={handleExportMenuClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MenuItem onClick={() => handleExportFormatClick("csv")}>Download as CSV</MenuItem>
+        <MenuItem onClick={() => handleExportFormatClick("parquet")}>Download as Parquet</MenuItem>
+      </Menu>
     </Box>
   );
 }

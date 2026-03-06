@@ -1,10 +1,11 @@
 import { Box } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { ConfirmDialog } from "../components/ConfirmDialog/ConfirmDialog";
 import { FileDropZone } from "../components/FileDropZone/FileDropZone";
 import { DatasetTable } from "./DatasetTable";
 import { useDispatch, useSelector } from "../store/hooks";
-import { deleteDataset, listDatasets, pollDatasets, uploadDataset } from "../store/middlewares";
+import { deleteDataset, exportDataset, listDatasets, pollDatasets, uploadDataset } from "../store/middlewares";
 import { DatasetStatus, type DatasetSummary } from "../types";
 
 const POLL_INTERVAL = 500;
@@ -64,6 +65,23 @@ export function DatasetsPage() {
     console.log("Dataset clicked:", row);
   }, []);
 
+  const handleExportClick = useCallback(
+    async (row: DatasetSummary, fmt: "csv" | "parquet") => {
+      const result = await dispatch(exportDataset({ datasetId: row.id, fmt }));
+      const payload = result.payload;
+      if (payload && !isAxiosError(payload) && payload instanceof Blob) {
+        const url = URL.createObjectURL(payload);
+        const a = document.createElement("a");
+        a.href = url;
+        const base = row.filename.replace(/\.csv$/i, "");
+        a.download = `${base}_export.${fmt}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    },
+    [dispatch],
+  );
+
   return (
     <Box>
       <FileDropZone onFile={handleUpload} disabled={isLoading} />
@@ -78,6 +96,7 @@ export function DatasetsPage() {
         onPageChange={handlePageChange}
         onRowsPerPageChange={handleRowsPerPageChange}
         onRowClick={handleRowClick}
+        onExportClick={handleExportClick}
         onDeleteClick={setDeleteTarget}
       />
 
