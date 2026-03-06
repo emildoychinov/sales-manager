@@ -18,12 +18,11 @@ class ETLService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_datasets(self, user_id: int) -> list[Dataset]:
+    def get_datasets_query(self, user_id: int) -> Query:
         return (
             self.db.query(Dataset)
             .filter(Dataset.user_id == user_id)
             .order_by(Dataset.created_at.desc())
-            .all()
         )
 
     def get_records_query(

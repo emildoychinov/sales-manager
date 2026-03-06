@@ -1,14 +1,25 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AxiosError } from "axios";
-import datasetsApiRequests, {
-  type RecordsQueryParams,
-} from "../../services/datasetsApiRequests";
+import datasetsApiRequests from "../../services/datasetsApiRequests";
+import type { PaginationParams, RecordsQueryParams } from "../../types";
 
 export const listDatasets = createAsyncThunk(
   "datasets/listDatasets",
-  async (): Promise<unknown | AxiosError> => {
+  async (params: PaginationParams = {}): Promise<unknown | AxiosError> => {
     try {
-      const response = await datasetsApiRequests.list();
+      const response = await datasetsApiRequests.list(params);
+      return response.data;
+    } catch (err) {
+      return err as AxiosError;
+    }
+  }
+);
+
+export const pollDatasets = createAsyncThunk(
+  "datasets/pollDatasets",
+  async (params: PaginationParams = {}): Promise<unknown | AxiosError> => {
+    try {
+      const response = await datasetsApiRequests.list(params);
       return response.data;
     } catch (err) {
       return err as AxiosError;

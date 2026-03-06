@@ -1,9 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AxiosError } from "axios";
-import authApiRequests, {
-  type LoginPayload,
-  type RegisterPayload,
-} from "../../services/authApiRequests";
+import authApiRequests from "../../services/authApiRequests";
+import type { LoginPayload, RegisterPayload } from "../../types";
 import { config } from "../../config";
 
 export const register = createAsyncThunk(

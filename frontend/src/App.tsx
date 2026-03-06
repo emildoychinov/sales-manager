@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import { useEffect } from "react";
 import { AuthForm } from "./components/AuthForm/AuthForm";
+import { DatasetsPage } from "./pages/DatasetsPage";
 import { config } from "./config";
 import { useDispatch, useSelector } from "./store/hooks";
 import { fetchMe } from "./store/middlewares/authMiddleware";
@@ -39,21 +40,23 @@ function AppContent() {
   }
 
   if (!auth.isAuthenticated) {
-    return (
-      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center" }}>
-        <AuthForm />
-      </Box>
-    );
+    return <AuthForm />;
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h6">Logged in as {auth.user?.email}</Typography>
-        <Button variant="outlined" color="primary" onClick={() => dispatch(clearAuth())}>
-          Log out
-        </Button>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>Datasets</Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {auth.user?.email}
+          </Typography>
+          <Button size="small" variant="outlined" onClick={() => dispatch(clearAuth())}>
+            Log out
+          </Button>
+        </Box>
       </Box>
+      <DatasetsPage />
     </Container>
   );
 }

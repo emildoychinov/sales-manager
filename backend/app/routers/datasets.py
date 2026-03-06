@@ -21,12 +21,13 @@ from app.schemas import (
 
 router = APIRouter()
 
-@router.get("/", response_model=list[DatasetSummary])
+@router.get("/", response_model=Page[DatasetSummary])
 def list_datasets(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return ETLService(db).get_datasets(current_user.id)
+    query = ETLService(db).get_datasets_query(current_user.id)
+    return paginate(db, query)
 
 @router.get("/{dataset_id}", response_model=DatasetSummary)
 #TODO : return upload progress

@@ -2,19 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { isAxiosError } from "axios";
 import { login, register, fetchMe } from "../middlewares/authMiddleware";
 import { config } from "../../config";
-
-export interface AuthUser {
-  id: number;
-  email: string;
-  created_at: string;
-}
-
-export interface AuthState {
-  user: AuthUser | null;
-  isLoading: boolean;
-  errorMessage: string;
-  isAuthenticated: boolean;
-}
+import type { AuthUser, AuthState } from "../../types";
 
 const initialState: AuthState = {
   user: null,

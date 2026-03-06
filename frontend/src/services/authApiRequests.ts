@@ -1,14 +1,5 @@
 import { axiosClient } from "../utils/axiosClient";
-
-export interface RegisterPayload {
-  email: string;
-  password: string;
-}
-
-export interface LoginPayload {
-  username: string;
-  password: string;
-}
+import type { LoginPayload, RegisterPayload } from "../types";
 
 const authApiRequests = {       
   register: (data: RegisterPayload): Promise<any> => {

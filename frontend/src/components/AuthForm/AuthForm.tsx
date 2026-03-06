@@ -12,8 +12,7 @@ import { useState } from "react";
 import { useDispatch, useSelector } from "../../store/hooks";
 import { login, register } from "../../store/middlewares";
 import { clearAuthError } from "../../store/reducers/authReducer";
-
-type AuthMode = "login" | "register";
+import type { AuthMode } from "../../types";
 
 export function AuthForm() {
   const dispatch = useDispatch();

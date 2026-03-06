@@ -2,38 +2,18 @@ import { createSlice } from "@reduxjs/toolkit";
 import { isAxiosError } from "axios";
 import {
   listDatasets,
+  pollDatasets,
   getDatasetById,
   getDatasetRecords,
   getDatasetAggregates,
   uploadDataset,
   deleteDataset,
 } from "../middlewares/datasetsMiddleware";
-
-export interface DatasetSummary {
-  id: number;
-  filename: string;
-  status: string;
-  total_rows: number;
-  rows_dropped: number;
-  total_sales: number;
-  date_min: string | null;
-  date_max: string | null;
-  progress: number;
-  error_message: string | null;
-  created_at: string;
-}
-
-export interface DatasetsState {
-  datasets: DatasetSummary[];
-  selectedDataset: DatasetSummary | null;
-  records: unknown;
-  aggregates: unknown;
-  isLoading: boolean;
-  errorMessage: string | null;
-}
+import type { DatasetSummary, DatasetsState, PaginatedDatasetsResponse } from "../../types";
 
 const initialState: DatasetsState = {
   datasets: [],
+  datasetsTotal: 0,
   selectedDataset: null,
   records: null,
   aggregates: null,
@@ -61,13 +41,22 @@ const datasetsSlice = createSlice({
         if (isAxiosError(action.payload)) {
           state.errorMessage = "Failed to load datasets";
         } else {
-          state.datasets = (action.payload as DatasetSummary[]) ?? [];
+          const data = action.payload as PaginatedDatasetsResponse;
+          state.datasets = data.items ?? [];
+          state.datasetsTotal = data.total ?? 0;
           state.errorMessage = null;
         }
         state.isLoading = false;
       })
       .addCase(listDatasets.rejected, (state) => {
         state.isLoading = false;
+      })
+      .addCase(pollDatasets.fulfilled, (state, action) => {
+        if (!isAxiosError(action.payload)) {
+          const data = action.payload as PaginatedDatasetsResponse;
+          state.datasets = data.items ?? [];
+          state.datasetsTotal = data.total ?? 0;
+        }
       })
       .addCase(getDatasetById.pending, (state) => {
         state.isLoading = true;
